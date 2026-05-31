@@ -2,12 +2,10 @@ name: lsc-mini-db-app
 region: fra
 services:
   - name: web
-    git:
-      repo_clone_url: https://github.com/Bisharah/lsc-mini-db-app.git
-      branch: main
-    source_dir: /
-    environment_slug: python
-    run_command: uvicorn main:app --host 0.0.0.0 --port 8080
+    image:
+      registry_type: DOCR
+      repository: mini-db-app
+      tag: latest
     http_port: 8080
     instance_size_slug: apps-s-1vcpu-0.5gb
     instance_count: 1
