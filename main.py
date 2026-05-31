@@ -16,12 +16,21 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 app = FastAPI(title="LSC Mini DB App")
 
 
+_schema_ready = False
+
+
 def _connect():
     # DO managed Postgres requires SSL; the injected URL already carries sslmode=require.
-    return psycopg2.connect(DATABASE_URL)
+    # connect_timeout keeps a slow/unreachable DB from ever blocking a request.
+    return psycopg2.connect(DATABASE_URL, connect_timeout=10)
 
 
-def _init_schema() -> None:
+def _ensure_schema() -> None:
+    """Create the table on first use. Lazy (NOT at startup) so a slow managed DB can
+    never block uvicorn from serving — that was killing the readiness probe."""
+    global _schema_ready
+    if _schema_ready:
+        return
     conn = _connect()
     try:
         with conn.cursor() as cur:
@@ -32,20 +41,9 @@ def _init_schema() -> None:
                 " ua text)"
             )
         conn.commit()
+        _schema_ready = True
     finally:
         conn.close()
-
-
-@app.on_event("startup")
-def _startup() -> None:
-    if not DATABASE_URL:
-        print("WARN: DATABASE_URL not set")
-        return
-    try:
-        _init_schema()
-        print("schema ready")
-    except Exception as exc:  # noqa: BLE001
-        print(f"schema init failed: {exc}")
 
 
 @app.get("/health")
@@ -72,6 +70,7 @@ def health() -> JSONResponse:
 def home() -> str:
     total, recent = 0, []
     if DATABASE_URL:
+        _ensure_schema()
         conn = _connect()
         try:
             with conn.cursor() as cur:

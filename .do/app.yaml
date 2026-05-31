@@ -1,10 +1,10 @@
-name: lsc-mini-db-app
+name: life-sports-club
 region: fra
 services:
   - name: web
     image:
       registry_type: DOCR
-      repository: mini-db-app
+      repository: life-sports-club
       tag: latest
     http_port: 8080
     instance_size_slug: apps-s-1vcpu-0.5gb
